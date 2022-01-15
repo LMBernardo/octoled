@@ -2,3 +2,4 @@ include README.md
 recursive-include octoprint_OctOLED/templates *
 recursive-include octoprint_OctOLED/translations *
 recursive-include octoprint_OctOLED/static *
+recursive-include octoprint_OctOLED/fonts *

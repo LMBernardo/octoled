@@ -1,6 +1,11 @@
 # coding=utf-8
 from __future__ import absolute_import
 
+<<<<<<< HEAD
+=======
+import os
+
+>>>>>>> bea3fc2 (Updates)
 # OLED Display
 import board
 from PIL import Image, ImageDraw, ImageFont
@@ -29,17 +34,32 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         # TODO: Width and height can be obtained from self._oled once initialized so we probably don't need to store these    
         self._disp_width = self._settings.get(["display_width"]) if width == -1 else width
         self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
+<<<<<<< HEAD
+=======
+        self._disp_rotate_180 = self._settings.get(["rotate_180"])
+        self._disp_font_face = "Noto_Sans/NotoSans-Regular"
+        self._disp_font_size = self._settings.get(["display_font_size"])
+>>>>>>> bea3fc2 (Updates)
         self._disp_border = 5
         self._disp_addr = 0x3C
         self._current_text = ""
         self._anim_task = None
 
+<<<<<<< HEAD
+=======
+        self._font_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + '/fonts') + '/'
+
+>>>>>>> bea3fc2 (Updates)
         # Only I2C displays are supported
         self._i2c = board.I2C()
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
         # reset=oled_reset)
 
+<<<<<<< HEAD
         self._oled.rotate(self._settings.get(["rotate_180"]))
+=======
+        self._oled.rotate(self._disp_rotate_180)
+>>>>>>> bea3fc2 (Updates)
 
         # Clear display.
         self._oled.fill(0)
@@ -51,7 +71,12 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 
         # Get drawing object to draw on image.
         self._disp_draw = ImageDraw.Draw(self._disp_image)
+<<<<<<< HEAD
         self._disp_font = ImageFont.load_default()
+=======
+        self._logger.info("Loading font: " + self._disp_font_face + ".ttf")
+        self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", self._disp_font_size)
+>>>>>>> bea3fc2 (Updates)
         self.show_text(self._settings.get(["display_text"]))
 
     def change_resolution(self, width = -1, height = -1):
@@ -59,6 +84,10 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
         self._oled.rotate(self._settings.get(["rotate_180"]))
+<<<<<<< HEAD
+=======
+        self._disp_rotate_180 = self._settings.get(["rotate_180"])
+>>>>>>> bea3fc2 (Updates)
 
         # Clear display.
         self._oled.fill(0)
@@ -149,11 +178,16 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         await self._anim_task
     
     def play_demo_animation(self):
+<<<<<<< HEAD
         asyncio.run(self._play_demo_animation_wrapper)
+=======
+        asyncio.run(self._play_demo_animation_wrapper())
+>>>>>>> bea3fc2 (Updates)
 
     ##~ EventHandlerPlugin mixin
     def on_event(self, event, payload):
         if event == "SettingsUpdated":
+<<<<<<< HEAD
             new_text = self._settings.get(["display_text"])
             if self._current_text != new_text:
                 self.show_text(new_text)
@@ -162,29 +196,79 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
                 self.play_demo_animation()
             else:
                 if self.anim_task != None:
+=======
+            self._logger.info("Updating display settings...")
+
+            # Set display
+            width = self._settings.get(["display_width"])
+            height = self._settings.get(["display_height"])
+            r180 = self._settings.get(["rotate_180"])
+            if width != self._disp_width or height != self._disp_height:
+                self.change_resolution()
+            elif r180 != self._disp_rotate_180:
+                self._oled.rotate(r180)
+                self._disp_rotate_180 = r180
+                self._oled.show()
+
+            # Set text
+            new_text = self._settings.get(["display_text"])
+            new_text_size = self._settings.get(["display_font_size"])
+            if self._current_text != new_text or self._disp_font_size != new_text_size:
+                self._disp_font_size = new_text_size
+                self._logger.info("Loading font: " + self._disp_font_face + ".ttf")
+                self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", self._disp_font_size)
+                self.show_text(new_text)
+                self._logger.info("Set text: " + new_text)
+
+            # Set animation
+            if self._settings.get(["demo_anim"]) == True:
+                self._logger.info("Playing demo animation...")
+                self.play_demo_animation()
+            else:
+                if self._anim_task != None:
+                    self._logger.info("Cancelling demo animation")
+>>>>>>> bea3fc2 (Updates)
                     self._anim_task.cancel()
                     self._anim_task = None
 
     ##~ SimpleApiPlugin mixin
     def get_api_commands(self):
         return dict(
+<<<<<<< HEAD
             show_text=["text"]
+=======
+            # show_text=["text"]
+            apply_settings=[]
+>>>>>>> bea3fc2 (Updates)
         )
 
     def on_api_command(self, command, data):
         import flask
+<<<<<<< HEAD
         if command == "show_text":
             self._logger.info("Display show_text called: {parameter}".format(**data()))
             self.show_text(data)
         # elif command == "command2":
         #     self._logger.info("command2 called, some_parameter is {some_parameter}".format(**data))
+=======
+        # if command == "show_text":
+        #     self._logger.info("Display show_text called: {parameter}".format(**data()))
+        #     self.show_text(data)
+        # elif command == "command2":
+        #     self._logger.info("command2 called, some_parameter is {some_parameter}".format(**data))
+
+        if command == "apply_settings":
+            self._logger.info("Updated settings")
+            self.apply_settings()
+
+>>>>>>> bea3fc2 (Updates)
         return flask.jsonify(result="200 OK")
 
     def on_api_get(self, request):
         return flask.jsonify(text=self._settings.get(["display_text"]))
 
     ##~~ StartupPlugin mixin
-    def on_startup(self):
+    def on_startup(self, host, port):
         self._logger.info("Initializing OctOLED...")
 
     def on_after_startup(self):
@@ -195,6 +279,10 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
     def get_settings_defaults(self):
         return dict(
                 display_text="Hello world!",
+<<<<<<< HEAD
+=======
+                display_font_size=14,
+>>>>>>> bea3fc2 (Updates)
                 display_width=128,
                 display_height=32,
                 rotate_180=False,
