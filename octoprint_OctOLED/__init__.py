@@ -167,8 +167,10 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
             height = self._settings.get(["display_height"])
             r180 = self._settings.get(["rotate_180"])
             if width != self._disp_width or height != self._disp_height:
+                self._logger.info("Setting resolution: " + str(width) + "x" + str(height))
                 self.change_resolution()
             elif r180 != self._disp_rotate_180:
+                self._logger.info("Setting display rotation: " + str(r180))
                 self._oled.rotate(r180)
                 self._disp_rotate_180 = r180
                 self._oled.show()
