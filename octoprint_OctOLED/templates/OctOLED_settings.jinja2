@@ -4,13 +4,6 @@
         <label class="control-label">{{ _('Display Text') }}</label>
         <div class="controls" data-bind="disabled: settings.plugins.OctOLED.demo_anim">
             {# id="display_text" onchange="display_text_change()" #}
-<<<<<<< HEAD
-            <label for="show_text">Show text on screen:</label>
-            <input type="text" class="input-block-level" name="show_text" id="show_text" data-bind="value: settings.plugins.OctOLED.display_text">
-        </div>
-    </div>
-        <div class="control-group">
-=======
             <label for="show_text">Show text:</label>
             <input type="text" class="input-block-level" name="show_text" id="show_text" data-bind="value: settings.plugins.OctOLED.display_text">
             <label for="display_font_size">Font size:</label>
@@ -18,45 +11,25 @@
         </div>
     </div>
     <div class="control-group">
->>>>>>> bea3fc2 (Updates)
+
         <label class="control-label">{{ _('Display Settings') }}</label>
         <div class="controls">
             <label for="display_width">Display width:</label>
             <input type="number" min="1" step="1" class="input-block-level" name="display_width" id="display_width" data-bind="value: settings.plugins.OctOLED.display_width">
             <label for="display_height">Display height:</label>
             <input type="number" min="1" step="1" class="input-block-level" name="display_height" id="display_height" data-bind="value: settings.plugins.OctOLED.display_height">
-<<<<<<< HEAD
-            <label for="rotate_180">Rotate display 180 degrees</label>
-            <input type="checkbox" class="input-block-level" name="rotate_180" id="rotate_180" data-bind="value: settings.plugins.OctOLED.rotate_180">
-        </div>
-    </div>
-        </div>
-        <div class="control-group">
-=======
             <label for="rotate_180">Rotate 180 degrees</label>
             <input type="checkbox" class="input-block-level" name="rotate_180" id="rotate_180" data-bind="value: settings.plugins.OctOLED.rotate_180">
         </div>
     </div>
     <div class="control-group">
->>>>>>> bea3fc2 (Updates)
         <label class="control-label">{{ _('Animations') }}</label>
         <div class="controls">
             <label for="demo_anim">Play Demo Animation</label>
             <input type="checkbox" class="input-block-level" name="demo_anim" id="demo_anim" data-bind="value: settings.plugins.OctOLED.demo_anim">
         </div>
     </div>
-<<<<<<< HEAD
-=======
-    {#
-    <div class="control-group">
-        <label class="control-label">{{ _('Apply Settings') }}</label>
-        <div class="controls">
-                <button id="apply_settings" type="submit" onclick = "apply_settings()" class="contact_send_btn trans_200"  value="apply">Apply</button>
-        </div>
-    </div>
-    #}
-
->>>>>>> bea3fc2 (Updates)
+    
 </form>
 
 {#
