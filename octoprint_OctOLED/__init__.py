@@ -32,7 +32,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
         self._disp_rotate_180 = self._settings.get(["rotate_180"])
         self._disp_font_face = "Noto_Sans/NotoSans-Regular"
-        self._disp_font_size = self._settings.get(["display_font_size"])
+        self._disp_font_size = int(self._settings.get(["display_font_size"]))
         self._disp_border = 5
         self._disp_addr = 0x3C
         self._current_text = ""
@@ -56,7 +56,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         # Get drawing object to draw on image.
         self._disp_draw = ImageDraw.Draw(self._disp_image)
         self._logger.info("Loading font: " + self._disp_font_face + ".ttf")
-        self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", self._disp_font_size)
+        self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", int(self._disp_font_size))
         self.show_text(self._settings.get(["display_text"]))
 
     def change_resolution(self, width = -1, height = -1):
@@ -176,12 +176,12 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
                 self._oled.show()
 
             # Set text
-            new_text = self._settings.get(["display_text"])
-            new_text_size = self._settings.get(["display_font_size"])
-            if self._current_text != new_text or self._disp_font_size != new_text_size:
+            new_text = int(self._settings.get(["display_text"]))
+            new_text_size = int(self._settings.get(["display_font_size"]))
+            if self._current_text != new_text or int(self._disp_font_size) != new_text_size:
                 self._disp_font_size = new_text_size
                 self._logger.info("Loading font: " + self._disp_font_face + ".ttf")
-                self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", self._disp_font_size)
+                self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", int(self._disp_font_size))
                 self.show_text(new_text)
                 self._logger.info("Set text: " + new_text)
 
