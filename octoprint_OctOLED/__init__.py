@@ -176,7 +176,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
                 self._oled.show()
 
             # Set text
-            new_text = int(self._settings.get(["display_text"]))
+            new_text = self._settings.get(["display_text"])
             new_text_size = int(self._settings.get(["display_font_size"]))
             if self._current_text != new_text or int(self._disp_font_size) != new_text_size:
                 self._disp_font_size = new_text_size
