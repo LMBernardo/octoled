@@ -1,21 +1,187 @@
 # coding=utf-8
 from __future__ import absolute_import
 
-### (Don't forget to remove me)
-# This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
-# as well as the plugin mixins it's subclassing from. This is really just a basic skeleton to get you started,
-# defining your plugin as a template plugin, settings and asset plugin. Feel free to add or remove mixins
-# as necessary.
-#
-# Take a look at the documentation on what other plugin mixins are available.
+# OLED Display
+import board
+from PIL import Image, ImageDraw, ImageFont
+import adafruit_ssd1306
+
+# API
+import flask
+
+# Animations
+import asyncio
+import math
+import time
 
 import octoprint.plugin
 
-class OctoledPlugin(octoprint.plugin.SettingsPlugin,
+class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
     octoprint.plugin.AssetPlugin,
     octoprint.plugin.TemplatePlugin,
-    octoprint.plugin.StartupPlugin
+    octoprint.plugin.StartupPlugin,
+    octoprint.plugin.SimpleApiPlugin,
+    octoprint.plugin.EventHandlerPlugin
 ):
+
+    ##~~ Setup initial display
+    def init_display(self, width = -1, height = -1):
+        # TODO: Width and height can be obtained from self._oled once initialized so we probably don't need to store these    
+        self._disp_width = self._settings.get(["display_width"]) if width == -1 else width
+        self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
+        self._disp_border = 5
+        self._disp_addr = 0x3C
+        self._current_text = ""
+        self._anim_task = None
+
+        # Only I2C displays are supported
+        self._i2c = board.I2C()
+        self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
+        # reset=oled_reset)
+
+        self._oled.rotate(self._settings.get(["rotate_180"]))
+
+        # Clear display.
+        self._oled.fill(0)
+        self._oled.show()
+
+        # Create blank image for drawing.
+        # Make sure to create image with mode '1' for 1-bit color.
+        self._disp_image = Image.new("1", (self._oled.width, self._oled.height))
+
+        # Get drawing object to draw on image.
+        self._disp_draw = ImageDraw.Draw(self._disp_image)
+        self._disp_font = ImageFont.load_default()
+        self.show_text(self._settings.get(["display_text"]))
+
+    def change_resolution(self, width = -1, height = -1):
+        self._disp_width = self._settings.get(["display_width"]) if width == -1 else width
+        self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
+        self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
+        self._oled.rotate(self._settings.get(["rotate_180"]))
+
+        # Clear display.
+        self._oled.fill(0)
+        self._oled.show()
+
+        # Create blank image for drawing.
+        # Make sure to create image with mode '1' for 1-bit color.
+        self._disp_image = Image.new("1", (self._oled.width, self._oled.height))
+
+        # Get drawing object to draw on image.
+        self._disp_draw = ImageDraw.Draw(self._disp_image)
+        self.show_text(self._settings.get(["display_text"]))
+    
+    def show_text(self, text):
+        # Don't try to update the display if we're playing an animation
+        if self._anim_task != None:
+            return
+        # Clear image buffer by drawing a black filled box.
+        self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
+        # Draw Some Text
+        (font_width, font_height) = self._disp_font.getsize(text)
+        self._disp_draw.text(
+            (self._oled.width // 2 - font_width // 2, self._oled.height // 2 - font_height // 2),
+            text,
+            font=self._disp_font,
+            fill=255,
+        )
+        self._current_text = text
+
+        # Display image
+        self._oled.image(self._disp_image)
+        self._oled.show()
+
+    ##~ Animations
+    def _play_demo_animation_fn(self):
+        # Clear image buffer by drawing a black filled box.
+        self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
+        self._logger.info("Demo animation started")
+        # Define text and get total width.
+        text = 'SSD1306 ORGANIC LED DISPLAY. THIS IS AN OLD SCHOOL DEMO SCROLLER!! GREETZ TO: LADYADA & THE ADAFRUIT CREW, TRIXTER, FUTURE CREW, AND FARBRAUSCH'
+        maxwidth, unused = self._disp_draw.textsize(text, font=self._disp_font)
+        try:
+            # Set animation and sine wave parameters.
+            amplitude = self._oled.width/4
+            offset = self._oled.height/2 - 4
+            velocity = -2
+            startpos = self._oled.width
+
+            # Animate text moving in sine wave.
+            pos = startpos
+            while True:
+                # Clear image buffer by drawing a black filled box.
+                self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
+                # Enumerate characters and draw them offset vertically based on a sine wave.
+                x = pos
+                for i, c in enumerate(text):
+                    # Stop drawing if off the right side of screen.
+                    if x > self._oled.width:
+                        break
+                    # Calculate width but skip drawing if off the left side of screen.
+                    if x < -10:
+                        char_width, char_height = self._disp_draw.textsize(c, font=self._disp_font)
+                        x += char_width
+                        continue
+                    # Calculate offset from sine wave.
+                    y = offset+math.floor(amplitude*math.sin(x/float(self._oled.width)*2.0*math.pi))
+                    # Draw text.
+                    self._disp_draw.text((x, y), c, font=self._disp_font, fill=255)
+                    # Increment x position based on chacacter width.
+                    char_width, char_height = self._disp_draw.textsize(c, font=self._disp_font)
+                    x += char_width
+                # Draw the image buffer.
+                self._oled.image(self._disp_image)
+                self._oled.show()
+                # Move position for next frame.
+                pos += velocity
+                # Start over if text has scrolled completely off left side of screen.
+                if pos < -maxwidth:
+                    pos = startpos
+                # Pause briefly before drawing next frame.
+                time.sleep(0.1)
+        except asyncio.CancelledError:
+            self._logger.info('Demo animation cancelled')
+            raise
+
+    async def _play_demo_animation_wrapper(self):
+        self._anim_task = asyncio.create_task(self._play_demo_animation_fn())
+        await self._anim_task
+    
+    def play_demo_animation(self):
+        asyncio.run(self._play_demo_animation_wrapper)
+
+    ##~ EventHandlerPlugin mixin
+    def on_event(self, event, payload):
+        if event == "SettingsUpdated":
+            new_text = self._settings.get(["display_text"])
+            if self._current_text != new_text:
+                self.show_text(new_text)
+
+            if self._settings.get(["anim_demo"]) == True:
+                self.play_demo_animation()
+            else:
+                if self.anim_task != None:
+                    self._anim_task.cancel()
+                    self._anim_task = None
+
+    ##~ SimpleApiPlugin mixin
+    def get_api_commands(self):
+        return dict(
+            show_text=["text"]
+        )
+
+    def on_api_command(self, command, data):
+        import flask
+        if command == "show_text":
+            self._logger.info("Display show_text called: {parameter}".format(**data()))
+            self.show_text(data)
+        # elif command == "command2":
+        #     self._logger.info("command2 called, some_parameter is {some_parameter}".format(**data))
+        return flask.jsonify(result="200 OK")
+
+    def on_api_get(self, request):
+        return flask.jsonify(text=self._settings.get(["display_text"]))
 
     ##~~ StartupPlugin mixin
     def on_startup(self):
@@ -23,12 +189,19 @@ class OctoledPlugin(octoprint.plugin.SettingsPlugin,
 
     def on_after_startup(self):
         self._logger.info("Initial display text: %s" % self._settings.get(["display_text"]))
+        self.init_display()
 
     ##~~ SettingsPlugin mixin
     def get_settings_defaults(self):
-        return dict(display_text="Hello world!")
+        return dict(
+                display_text="Hello world!",
+                display_width=128,
+                display_height=32,
+                rotate_180=False,
+                demo_anim=False
+            )
 
-    ##~~
+    # Disable custom bindings (??)
     def get_template_configs(self):
         return [
             dict(type="navbar", custom_bindings=False),
@@ -47,7 +220,6 @@ class OctoledPlugin(octoprint.plugin.SettingsPlugin,
         }
 
     ##~~ Softwareupdate hook
-
     def get_update_information(self):
         # Define the configuration for your plugin to use with the Software Update
         # Plugin here. See https://docs.octoprint.org/en/master/bundledplugins/softwareupdate.html
@@ -82,10 +254,18 @@ __plugin_pythoncompat__ = ">=3,<4" # only python 3
 #__plugin_pythoncompat__ = ">=2.7,<4" # python 2 and 3
 
 def __plugin_load__():
+
+    plugin = OctOLEDPlugin()
+
     global __plugin_implementation__
-    __plugin_implementation__ = OctoledPlugin()
+    __plugin_implementation__ = plugin
 
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
     }
+
+    global __plugin_helpers__
+    __plugin_helpers__ = dict(
+        show_text=plugin.show_text
+    )

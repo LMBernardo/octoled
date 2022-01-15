@@ -33,7 +33,8 @@ plugin_url = "https://github.com/LMBernardo/octoled"
 plugin_license = "AGPLv3"
 
 # Any additional requirements besides OctoPrint should be listed here
-plugin_requires = []
+# plugin_requires = [, "pillow", "flask"]
+plugin_requires= ["adafruit-circuitpython-ssd1306>=2,<3", "pillow>=8,<10", "flask>=1,<2"]
 
 ### --------------------------------------------------------------------------------------------------------------------
 ### More advanced options that you usually shouldn't have to touch follow after this point
