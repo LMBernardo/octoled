@@ -1,8 +1,10 @@
 # OctOLED
 
+### THIS PLUGIN IS EXPERIMENTAL AND IS CURRENTLY IN A PRE-RELEASE STATE!
+
 Allows OctoPrint to display simple text on a SSD1306 OLED screen. Enables static text setting from preferences.
 Specifically designed for the Raspberry Pi B+ using pins 3 and 5 for I2C data, but should work with any setup as
-long as there is an I2C display at address 0x3C. 
+long as there is an I2C display at address 0x3C.
 
 ### TODO:
 1. Expose API functions to enable other plugins to control the display
@@ -17,6 +19,9 @@ long as there is an I2C display at address 0x3C.
 3. Support more display devices
 4. Support more host devices
 5. Better configuration options and setup process
+6. TESTS!!!!
+7. Add CI/CD process
+8. Get plugin published in the Plugin Manager (WAITING FOR IMPROVEMENTS TO CODE - NOT CURRENTLY FIT FOR FULL RELEASE)
 
 ## Setup
 Connect your display to the default I2C pins on the Raspberry Pi. CURRENTLY ONLY SUPPORTS DISPLAYS ON ADDRESS 0x3C!!
