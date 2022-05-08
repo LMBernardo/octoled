@@ -26,28 +26,29 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 ):
 
     ##~~ Setup initial display
+    # May throw on _oled.show() or show_text()
     def init_display(self, width = -1, height = -1):
-        # TODO: Width and height can be obtained from self._oled once initialized so we probably don't need to store these    
+        # TODO: Width and height can be obtained from self._oled once initialized so we probably don't need to store these
+        # TODO: Actually we probably don't need to store any of these that are saved in _settings - or at least just store the ones that are frequently accessed
+        # TODO: Expose more configuration options on the plugin settings page
         self._disp_width = self._settings.get(["display_width"]) if width == -1 else width
         self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
         self._disp_rotate_180 = self._settings.get(["rotate_180"])
         self._disp_font_face = "Noto_Sans/NotoSans-Regular"
         self._disp_font_size = int(self._settings.get(["display_font_size"]))
         self._disp_border = 5
+        # TODO: Scan I2C and present a list of options in the settings page
         self._disp_addr = 0x3C
         self._current_text = ""
         self._anim_task = None
         self._font_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + '/fonts') + '/'
         # Only I2C displays are supported
         self._i2c = board.I2C()
+        # TODO: Support more display types
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
         # reset=oled_reset)
         self._oled.rotate(self._settings.get(["rotate_180"]))
         self._disp_rotate_180 = self._settings.get(["rotate_180"])
-
-        # Clear display.
-        self._oled.fill(0)
-        self._oled.show()
 
         # Create blank image for drawing.
         # Make sure to create image with mode '1' for 1-bit color.
@@ -57,6 +58,11 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         self._disp_draw = ImageDraw.Draw(self._disp_image)
         self._logger.info("Loading font: " + self._disp_font_face + ".ttf")
         self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", int(self._disp_font_size))
+
+        # Clear display.
+        self._oled.fill(0)
+        self._oled.show()
+        # Draw text
         self.show_text(self._settings.get(["display_text"]))
 
     def change_resolution(self, width = -1, height = -1):
@@ -68,7 +74,13 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 
         # Clear display.
         self._oled.fill(0)
-        self._oled.show()
+        if self._enabled:
+            try:
+                self._oled.show()
+            except OSError as os_err:
+                self._logger.error("IO error: " + str(os_err))
+            except Exception as err:
+                self._logger.error("Unknown error: " + str(err))
 
         # Create blank image for drawing.
         # Make sure to create image with mode '1' for 1-bit color.
@@ -76,7 +88,8 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 
         # Get drawing object to draw on image.
         self._disp_draw = ImageDraw.Draw(self._disp_image)
-        self.show_text(self._settings.get(["display_text"]))
+        if self._enabled:
+            self.show_text(self._settings.get(["display_text"]))
     
     def show_text(self, text):
         # Don't try to update the display if we're playing an animation
@@ -96,10 +109,20 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 
         # Display image
         self._oled.image(self._disp_image)
-        self._oled.show()
+        if self._enabled:
+            try:
+                self._oled.show()
+            except OSError as os_err:
+                self._logger.error("IO error: " + str(os_err))
+            except Exception as err:
+                self._logger.error("Unknown error: " + str(err))
 
     ##~ Animations
+    # May throw
+    # TODO: Fix this and add attribution (THIS IS NOT MY CODE)
     def _play_demo_animation_fn(self):
+        if not self._enabled:
+            return
         # Clear image buffer by drawing a black filled box.
         self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
         self._logger.info("Demo animation started")
@@ -116,7 +139,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
             # Animate text moving in sine wave.
             pos = startpos
             while True:
-                # Clear image buffer by drawing a black filled box.
+                # Clear image buffer by drawing a black filled box.1
                 self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
                 # Enumerate characters and draw them offset vertically based on a sine wave.
                 x = pos
@@ -149,59 +172,90 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         except asyncio.CancelledError:
             self._logger.info('Demo animation cancelled')
             raise
+        except Exception as err:
+            self._logger.error("Unknown error: " + str(err))
+            raise
 
+    # TODO: Fix this
     async def _play_demo_animation_wrapper(self):
         self._anim_task = asyncio.create_task(self._play_demo_animation_fn())
         await self._anim_task
     
+    # TODO: Fix this
     def play_demo_animation(self):
         asyncio.run(self._play_demo_animation_wrapper())
 
     ##~ EventHandlerPlugin mixin
     def on_event(self, event, payload):
+        # TODO: Massively refactor this, please
         if event == "SettingsUpdated":
             self._logger.info("Updating display settings...")
+            self._enabled = self._settings.get(["enabled"])
 
             # Set display
             width = self._settings.get(["display_width"])
             height = self._settings.get(["display_height"])
             r180 = self._settings.get(["rotate_180"])
-            if width != self._disp_width or height != self._disp_height:
-                self._logger.info("Setting resolution: " + str(width) + "x" + str(height))
-                self.change_resolution()
-            elif r180 != self._disp_rotate_180:
-                self._logger.info("Setting display rotation: " + str(r180))
-                self._oled.rotate(r180)
-                self._disp_rotate_180 = r180
-                self._oled.show()
+            if self._enabled:
+                if width != self._disp_width or height != self._disp_height:
+                    self._logger.info("Setting resolution: " + str(width) + "x" + str(height))
+                    self.change_resolution()
+                elif r180 != self._disp_rotate_180:
+                    self._logger.info("Setting display rotation: " + str(r180))
+                    self._oled.rotate(r180)
+                    self._disp_rotate_180 = r180
+                    try:
+                        self._oled.show()
+                    except OSError as os_err:
+                        self._logger.error("IO error: " + str(os_err))
+                    except Exception as err:
+                        self._logger.error("Unknown error: " + str(err))
 
             # Set text
             new_text = self._settings.get(["display_text"])
             new_text_size = int(self._settings.get(["display_font_size"]))
-            if self._current_text != new_text or int(self._disp_font_size) != new_text_size:
+
+            if int(self._disp_font_size) != new_text_size:
                 self._disp_font_size = new_text_size
-                self._logger.info("Loading font: " + self._disp_font_face + ".ttf")
+                self._logger.info("Reloading font: " + self._disp_font_face + ".ttf")
                 self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", int(self._disp_font_size))
+                if self._enabled:
+                    self.show_text(new_text)
+                    self._logger.info("Set text: " + new_text)
+            elif self._current_text != new_text and self._enabled:
                 self.show_text(new_text)
                 self._logger.info("Set text: " + new_text)
-
+                
             # Set animation
-            if self._settings.get(["demo_anim"]) == True:
-                self._logger.info("Playing demo animation...")
-                self.play_demo_animation()
+                if self._settings.get(["demo_anim"]) == True:
+                    self._logger.info("Playing demo animation...")
+                    self.play_demo_animation()
+                else:
+                    if self._anim_task != None:
+                        self._logger.info("Cancelling demo animation")
+                        self._anim_task.cancel()
+                        self._anim_task = None
+
+            if self._enabled and self._anim_task is None:
+                self.show_text(new_text)
             else:
-                if self._anim_task != None:
-                    self._logger.info("Cancelling demo animation")
-                    self._anim_task.cancel()
-                    self._anim_task = None
+                self._oled.fill(0)
+                try:
+                    self._oled.show()
+                except Exception as err:
+                    self._logger.info("Failed to clear display")
+
+            self._logger.info("Updated settings")
 
     ##~ SimpleApiPlugin mixin
+    # TODO: Implement plugin API
     def get_api_commands(self):
         return dict(
             # show_text=["text"]
             apply_settings=[]
         )
 
+    # TODO: Implement plugin API
     def on_api_command(self, command, data):
         import flask
         # if command == "show_text":
@@ -210,26 +264,46 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         # elif command == "command2":
         #     self._logger.info("command2 called, some_parameter is {some_parameter}".format(**data))
 
-        if command == "apply_settings":
-            self._logger.info("Updated settings")
-            self.apply_settings()
+        # TODO: Unfinished
+        # if command == "apply_settings":
+        #     self.apply_settings()
+        #     self._logger.info("Updated settings")
 
         return flask.jsonify(result="200 OK")
 
+    # TODO: Implement plugin API
     def on_api_get(self, request):
         return flask.jsonify(text=self._settings.get(["display_text"]))
 
     ##~~ StartupPlugin mixin
-    def on_startup(self, host, port):
+    def on_startup(self, _host, _port):
         self._logger.info("Initializing OctOLED...")
+        self._enabled = self._settings.get(["enabled"])
 
     def on_after_startup(self):
-        self._logger.info("Initial display text: %s" % self._settings.get(["display_text"]))
-        self.init_display()
+        self._logger.info("Enabled: %s" % str(self._enabled))
+        self._logger.info("Display Resolution: {0}x{1} (width x height)".format(self._settings.get(["display_width"]), self._settings.get(["display_height"])))
+        error = False
+        try:
+            self.init_display()
+        except ValueError as init_error:
+            self._logger.error("Failed to initialize! Display not found: " + str(init_error))
+            error = True
+        except Exception as err:
+            self._logger.error("Failed to initialize! Unknown error: " + str(err))
+            error = True
+        else:
+            self._logger.info("Initialization complete.")
+        finally:
+            if error and self._enabled:
+                self._logger.info("Disabling OctOLED!")
+                self._enabled = False
+                self._settings.set(["enabled"], False)
 
     ##~~ SettingsPlugin mixin
     def get_settings_defaults(self):
         return dict(
+                enabled=True,
                 display_text="Hello world!",
                 display_font_size=14,
                 display_width=128,

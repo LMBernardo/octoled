@@ -1,37 +1,73 @@
 <form class="form-horizontal">
-
     <div class="control-group">
-        <label class="control-label">{{ _('Display Text') }}</label>
-        <div class="controls" data-bind="disabled: settings.plugins.OctOLED.demo_anim">
+        <label class="control-label">{{ _('Text Settings') }}</label>
+        {# Text settings #}
+        <div class="controls"
+             data-bind="disabled: settings.plugins.OctOLED.demo_anim">
             {# id="display_text" onchange="display_text_change()" #}
             <label for="show_text">Show text:</label>
-            <input type="text" class="input-block-level" name="show_text" id="show_text" data-bind="value: settings.plugins.OctOLED.display_text">
+            <input type="text"
+                   class="input-block-level"
+                   name="show_text"
+                   id="show_text"
+                   data-bind="value: settings.plugins.OctOLED.display_text"/>
             <label for="display_font_size">Font size:</label>
-            <input type="number" min="1" step="1" class="input-block-level" name="display_font_size" id="display_font_size" data-bind="value: settings.plugins.OctOLED.display_font_size">
+            <input type="number"
+                   min="1"
+                   step="1"
+                   class="input-block-level"
+                   name="display_font_size"
+                   id="display_font_size"
+                   data-bind="value: settings.plugins.OctOLED.display_font_size"/>
         </div>
     </div>
+    {# Display Settings #}
     <div class="control-group">
-
         <label class="control-label">{{ _('Display Settings') }}</label>
         <div class="controls">
+            <label for="octoled_enabled">Enable OctOLED:</label>
+            <input type="checkbox"
+                   class="input-block-level"
+                   name="octoled_enabled"
+                   id="octoled_enabled"
+                   data-bind="value: settings.plugins.OctOLED.enabled"/>
             <label for="display_width">Display width:</label>
-            <input type="number" min="1" step="1" class="input-block-level" name="display_width" id="display_width" data-bind="value: settings.plugins.OctOLED.display_width">
+            <input type="number"
+                   min="1"
+                   step="1"
+                   class="input-block-level"
+                   name="display_width"
+                   id="display_width"
+                   data-bind="value: settings.plugins.OctOLED.display_width"/>
             <label for="display_height">Display height:</label>
-            <input type="number" min="1" step="1" class="input-block-level" name="display_height" id="display_height" data-bind="value: settings.plugins.OctOLED.display_height">
+            <input type="number"
+                   min="1"
+                   step="1"
+                   class="input-block-level"
+                   name="display_height"
+                   id="display_height"
+                   data-bind="value: settings.plugins.OctOLED.display_height"/>
             <label for="rotate_180">Rotate 180 degrees</label>
-            <input type="checkbox" class="input-block-level" name="rotate_180" id="rotate_180" data-bind="value: settings.plugins.OctOLED.rotate_180">
+            <input type="checkbox"
+                   class="input-block-level"
+                   name="rotate_180"
+                   id="rotate_180"
+                   data-bind="value: settings.plugins.OctOLED.rotate_180"/>
         </div>
     </div>
-    <div class="control-group">
+    {# Animation Settings #}
+    {# <div class="control-group">
         <label class="control-label">{{ _('Animations') }}</label>
         <div class="controls">
-            <label for="demo_anim">Play Demo Animation</label>
-            <input type="checkbox" class="input-block-level" name="demo_anim" id="demo_anim" data-bind="value: settings.plugins.OctOLED.demo_anim">
+            <label for="demo_anim">Play Demo Animation (borked)</label>
+            <input type="checkbox"
+                   class="input-block-level"
+                   name="demo_anim"
+                   id="demo_anim"
+                   data-bind="value: settings.plugins.OctOLED.demo_anim"/>
         </div>
-    </div>
-    
+    </div> #}
 </form>
-
 {#
 <script type="text/javascript">
     function display_text_change(){
@@ -42,7 +78,7 @@
                     command: 'show_text',
                     text: new_text
 	            headers: {
-		            'Content-type': 'application/json' // The type of data you're sending
+		            'Content-type': 'application/json'
 	            }
         });
     }
