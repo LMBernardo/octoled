@@ -103,7 +103,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
     def show_text(self, text):
         # Don't try to update the display if we're playing an animation
         if self._anim_task != None:
-            self._logger.info("Animation task is not None, skipping show_text")
+            self._logger.debug("Animation task is not None, skipping show_text")
             return
         # Clear image buffer by drawing a black filled box.
         self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
