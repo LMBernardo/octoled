@@ -39,7 +39,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         self._disp_border = 5
         # TODO: Scan I2C and present a list of options in the settings page
         self._disp_addr = 0x3C
-        self._current_text = ""
+        self._current_text = self._settings.get(["display_text"])
         self._anim_task = None
         self._font_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + '/fonts') + '/'
         # Only I2C displays are supported
@@ -47,7 +47,10 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         # TODO: Support more display types
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
         # reset=oled_reset)
-        self._oled.rotate(self._settings.get(["rotate_180"]))
+        if self._settings.get(["rotate_180"]):
+            self._oled.rotation = 2
+        else:
+            self._oled.rotation = 0
         self._disp_rotate_180 = self._settings.get(["rotate_180"])
 
         # Create blank image for drawing.
@@ -68,12 +71,26 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
     def change_resolution(self, width = -1, height = -1):
         self._disp_width = self._settings.get(["display_width"]) if width == -1 else width
         self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
+        self._logger.info("Setting resolution: " + str(width) + "x" + str(height))
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
-        self._oled.rotate(self._settings.get(["rotate_180"]))
-        self._disp_rotate_180 = self._settings.get(["rotate_180"])
+        if self._disp_rotate_180 != self._settings.get(["rotate_180"]):
+            self._logger.info("Flipping display orientation")
+            self._disp_rotate_180 = self._settings.get(["rotate_180"])
+            if self._settings.get(["rotate_180"]):
+                self._oled.rotation = 2
+            else:
+                self._oled.rotation = 0
 
         # Clear display.
         self._oled.fill(0)
+
+        # Create blank image for drawing.
+        # Make sure to create image with mode '1' for 1-bit color.
+        self._disp_image = Image.new("1", (self._oled.width, self._oled.height))
+
+        # Get drawing object to draw on image.
+        self._disp_draw = ImageDraw.Draw(self._disp_image)
+
         if self._enabled:
             try:
                 self._oled.show()
@@ -82,18 +99,13 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
             except Exception as err:
                 self._logger.error("Unknown error: " + str(err))
 
-        # Create blank image for drawing.
-        # Make sure to create image with mode '1' for 1-bit color.
-        self._disp_image = Image.new("1", (self._oled.width, self._oled.height))
-
-        # Get drawing object to draw on image.
-        self._disp_draw = ImageDraw.Draw(self._disp_image)
-        if self._enabled:
+        if self._anim_task is None:
             self.show_text(self._settings.get(["display_text"]))
     
     def show_text(self, text):
         # Don't try to update the display if we're playing an animation
         if self._anim_task != None:
+            self._logger.info("Animation task is not None, skipping show_text")
             return
         # Clear image buffer by drawing a black filled box.
         self._disp_draw.rectangle((0,0,self._oled.width,self._oled.height), outline=0, fill=0)
@@ -116,10 +128,36 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
                 self._logger.error("IO error: " + str(os_err))
             except Exception as err:
                 self._logger.error("Unknown error: " + str(err))
+        else:
+            self._logger.info("show_text: Display disabled, skipping show()")
 
     ##~ Animations
+
+    # # ATTRIBUTION FOR _play_demo_animation_fn():
+    # # Copyright (c) 2014 Adafruit Industries
+    # # Author: Tony DiCola
+    # # 
+    # # Permission is hereby granted, free of charge, to any person obtaining a copy
+    # # of this software and associated documentation files (the "Software"), to deal
+    # # in the Software without restriction, including without limitation the rights
+    # # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    # # copies of the Software, and to permit persons to whom the Software is
+    # # furnished to do so, subject to the following conditions:
+    # # 
+    # # The above copyright notice and this permission notice shall be included in
+    # # all copies or substantial portions of the Software.
+    # # 
+    # # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    # # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    # # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    # # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    # # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    # # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    # # THE SOFTWARE.
+    # https://github.com/adafruit/Adafruit_Python_SSD1306/blob/master/examples/animate.py
+
     # May throw
-    # TODO: Fix this and add attribution (THIS IS NOT MY CODE)
+    # TODO: Get this to work with asyncio
     def _play_demo_animation_fn(self):
         if not self._enabled:
             return
@@ -187,29 +225,19 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 
     ##~ EventHandlerPlugin mixin
     def on_event(self, event, payload):
+        self._logger.debug("Event payload: " + str(payload))
         # TODO: Massively refactor this, please
         if event == "SettingsUpdated":
             self._logger.info("Updating display settings...")
             self._enabled = self._settings.get(["enabled"])
+            self._logger.info("Display enabled: " + str(self._enabled))
 
             # Set display
             width = self._settings.get(["display_width"])
             height = self._settings.get(["display_height"])
             r180 = self._settings.get(["rotate_180"])
-            if self._enabled:
-                if width != self._disp_width or height != self._disp_height:
-                    self._logger.info("Setting resolution: " + str(width) + "x" + str(height))
-                    self.change_resolution()
-                elif r180 != self._disp_rotate_180:
-                    self._logger.info("Setting display rotation: " + str(r180))
-                    self._oled.rotate(r180)
-                    self._disp_rotate_180 = r180
-                    try:
-                        self._oled.show()
-                    except OSError as os_err:
-                        self._logger.error("IO error: " + str(os_err))
-                    except Exception as err:
-                        self._logger.error("Unknown error: " + str(err))
+            if width != self._disp_width or height != self._disp_height or r180 != self._disp_rotate_180:
+                self.change_resolution()
 
             # Set text
             new_text = self._settings.get(["display_text"])
@@ -219,31 +247,26 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
                 self._disp_font_size = new_text_size
                 self._logger.info("Reloading font: " + self._disp_font_face + ".ttf")
                 self._disp_font = ImageFont.truetype(self._font_dir + self._disp_font_face + ".ttf", int(self._disp_font_size))
-                if self._enabled:
-                    self.show_text(new_text)
-                    self._logger.info("Set text: " + new_text)
-            elif self._current_text != new_text and self._enabled:
-                self.show_text(new_text)
-                self._logger.info("Set text: " + new_text)
                 
             # Set animation
-                if self._settings.get(["demo_anim"]) == True:
-                    self._logger.info("Playing demo animation...")
-                    self.play_demo_animation()
-                else:
-                    if self._anim_task != None:
-                        self._logger.info("Cancelling demo animation")
-                        self._anim_task.cancel()
-                        self._anim_task = None
+            if self._settings.get(["demo_anim"]) == True:
+                self._logger.info("Playing demo animation...")
+                self.play_demo_animation()
+            elif self._anim_task != None:
+                    self._logger.info("Cancelling demo animation")
+                    self._anim_task.cancel()
+                    self._anim_task = None
 
-            if self._enabled and self._anim_task is None:
-                self.show_text(new_text)
-            else:
+            if not self._enabled:
                 self._oled.fill(0)
                 try:
                     self._oled.show()
                 except Exception as err:
                     self._logger.info("Failed to clear display")
+
+            if self._anim_task is None:
+                self._logger.info("Updating display text")
+                self.show_text(new_text)
 
             self._logger.info("Updated settings")
 
@@ -278,9 +301,9 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
     ##~~ StartupPlugin mixin
     def on_startup(self, _host, _port):
         self._logger.info("Initializing OctOLED...")
-        self._enabled = self._settings.get(["enabled"])
 
     def on_after_startup(self):
+        self._enabled = self._settings.get(["enabled"])
         self._logger.info("Enabled: %s" % str(self._enabled))
         self._logger.info("Display Resolution: {0}x{1} (width x height)".format(self._settings.get(["display_width"]), self._settings.get(["display_height"])))
         error = False
