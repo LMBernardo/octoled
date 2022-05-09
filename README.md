@@ -22,6 +22,7 @@ long as there is an I2C display at address 0x3C.
 6. TESTS!!!!
 7. Add CI/CD process
 8. Get plugin published in the Plugin Manager (WAITING FOR IMPROVEMENTS TO CODE - NOT CURRENTLY FIT FOR FULL RELEASE)
+9. Attempt to disable display when shutting down / restarting
 
 ## Setup
 Connect your display to the default I2C pins on the Raspberry Pi. CURRENTLY ONLY SUPPORTS DISPLAYS ON ADDRESS 0x3C!!
