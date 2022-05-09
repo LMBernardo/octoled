@@ -30,7 +30,7 @@
                    class="input-block-level"
                    name="enabled"
                    id="enabled"
-                   data-bind="value: settings.plugins.OctOLED.enabled"/>
+                   data-bind="checked: settings.plugins.OctOLED.enabled, value: settings.plugins.OctOLED.enabled"/>
             <label for="display_width">Display width:</label>
             <input type="number"
                    min="1"
@@ -52,7 +52,7 @@
                    class="input-block-level"
                    name="rotate_180"
                    id="rotate_180"
-                   data-bind="value: settings.plugins.OctOLED.rotate_180"/>
+                   data-bind="checked: settings.plugins.OctOLED.rotate_180, value: settings.plugins.OctOLED.rotate_180"/>
         </div>
     </div>
     {# Animation Settings #}
@@ -64,7 +64,7 @@
                    class="input-block-level"
                    name="demo_anim"
                    id="demo_anim"
-                   data-bind="value: settings.plugins.OctOLED.demo_anim"/>
+                   data-bind="checked: settings.plugins.OctOLED.demo_anim, value: settings.plugins.OctOLED.demo_anim"/>
         </div>
     </div> #}
 </form>

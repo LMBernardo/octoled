@@ -47,11 +47,10 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
         # TODO: Support more display types
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
         # reset=oled_reset)
-        if self._settings.get(["rotate_180"]):
+        if self._disp_rotate_180:
             self._oled.rotation = 2
         else:
             self._oled.rotation = 0
-        self._disp_rotate_180 = self._settings.get(["rotate_180"])
 
         # Create blank image for drawing.
         # Make sure to create image with mode '1' for 1-bit color.
@@ -71,15 +70,14 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
     def change_resolution(self, width = -1, height = -1):
         self._disp_width = self._settings.get(["display_width"]) if width == -1 else width
         self._disp_height = self._settings.get(["display_height"]) if height == -1 else height
-        self._logger.info("Setting resolution: " + str(width) + "x" + str(height))
+        self._logger.info("Setting resolution: " + str(self._disp_width) + "x" + str(self._disp_height))
         self._oled = adafruit_ssd1306.SSD1306_I2C(self._disp_width, self._disp_height, self._i2c, addr=self._disp_addr)
         if self._disp_rotate_180 != self._settings.get(["rotate_180"]):
-            self._logger.info("Flipping display orientation")
-            self._disp_rotate_180 = self._settings.get(["rotate_180"])
-            if self._settings.get(["rotate_180"]):
-                self._oled.rotation = 2
-            else:
-                self._oled.rotation = 0
+            self._logger.info("Flipping display")
+        if self._disp_rotate_180:
+            self._oled.rotation = 2
+        else:
+            self._oled.rotation = 0
 
         # Clear display.
         self._oled.fill(0)
@@ -225,12 +223,19 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
 
     ##~ EventHandlerPlugin mixin
     def on_event(self, event, payload):
-        self._logger.debug("Event payload: " + str(payload))
+        # self._logger.debug("Event payload: " + str(payload))
         # TODO: Massively refactor this, please
         if event == "SettingsUpdated":
             self._logger.info("Updating display settings...")
             self._enabled = self._settings.get(["enabled"])
-            self._logger.info("Display enabled: " + str(self._enabled))
+
+            self._logger.info("Display enabled: " + str(self._settings.get(["enabled"])))
+            self._logger.debug("Display Width: " + str(self._settings.get(["display_width"])))
+            self._logger.debug("Display Height: " + str(self._settings.get(["display_height"])))
+            self._logger.debug("Display Rotation: " + str(self._settings.get(["rotate_180"])))
+            self._logger.debug("Display Text: " + str(self._settings.get(["display_text"])))
+            self._logger.debug("Display Font Size: " + str(self._settings.get(["display_font_size"])))
+            self._logger.debug("Display Demo Animation: " + str(self._settings.get(["demo_anim"])))
 
             # Set display
             width = self._settings.get(["display_width"])
@@ -257,7 +262,7 @@ class OctOLEDPlugin(octoprint.plugin.SettingsPlugin,
                     self._anim_task.cancel()
                     self._anim_task = None
 
-            if not self._enabled:
+            if not self._settings.get(["enabled"]):
                 self._oled.fill(0)
                 try:
                     self._oled.show()
